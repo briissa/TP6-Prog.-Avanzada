@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no se especificó ninguna prueba\" && exit 1"
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm --filter activation-api test --runInBand",
+    "start:dev": "pnpm --filter activation-api start:dev"
   },
   "keywords": [],
   "author": "",

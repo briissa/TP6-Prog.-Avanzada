@@ -32,7 +32,7 @@ export class Activation {
   steps!: Record<string, { status: string; at: string }>;
 
   @Column({ type: 'jsonb', default: () => "'[]'" })
-  history!: Array<{ eventType: string; at: string }>;
+  history!: Array<{ eventId: string; eventType: string; at: string }>;
 
   @CreateDateColumn()
   createdAt!: Date;

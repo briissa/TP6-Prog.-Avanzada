@@ -33,9 +33,9 @@ services:
       # Considera Kafka saludable cuando responde a una consulta de versiones.
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:19092 > /dev/null 2>&1"]
       interval: 10s
-      timeout: 10s
+      timeout: 30s
       retries: 10
-      start_period: 20s
+      start_period: 60s
 
   kafka-init:
     # Tarea de inicializacion: espera a Kafka y crea los topics de la aplicacion.
@@ -106,6 +106,122 @@ services:
       # Puerto SMTP para la aplicacion y panel web para revisar los mensajes capturados.
       - "1025:1025"
       - "8025:8025"
+
+  activation-api:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: activation-api
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: poc
+      DB_PASSWORD: poc
+      DB_NAME: activation_db
+      KAFKA_BROKERS: kafka:19092
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: billing-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: poc
+      DB_PASSWORD: poc
+      DB_NAME: billing_db
+      KAFKA_BROKERS: kafka:19092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  provisioning-service:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: provisioning-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: poc
+      DB_PASSWORD: poc
+      DB_NAME: provisioning_db
+      KAFKA_BROKERS: kafka:19092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: notification-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: poc
+      DB_PASSWORD: poc
+      DB_NAME: notification_db
+      KAFKA_BROKERS: kafka:19092
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+
+  crm-analytics-service:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: crm-analytics-service
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: poc
+      DB_PASSWORD: poc
+      DB_NAME: crm_db
+      KAFKA_BROKERS: kafka:19092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
+  demo-ui:
+    build:
+      context: .
+      dockerfile: docker/app.Dockerfile
+      args:
+        APP: demo-ui
+    command: ["pnpm", "--filter", "demo-ui", "dev", "--host", "0.0.0.0"]
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - activation-api
 
 volumes:
   # Volumen persistente usado por el directorio de datos de PostgreSQL.
